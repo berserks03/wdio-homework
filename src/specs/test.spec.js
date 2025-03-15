@@ -1,10 +1,10 @@
-const { remote } = require('webdriverio');
+const { remote, Browser } = require('webdriverio');
 const { expect } = require('chai');
+const { LoginPage } = require('../LoginPage')
 
 describe('SauceDemo Login Tests', function () {
     this.timeout(30000);
-    
-    let browser;
+
     const browsers = ['chrome', 'microsoftedge'];
     const testData = [
         { username: '', password: '', expectedError: 'Username is required' }, // UC-1
@@ -14,12 +14,17 @@ describe('SauceDemo Login Tests', function () {
 
     browsers.forEach(browserName => {
         describe(`Testing on ${browserName}`, function () {
+            let browser;
+            let loginPage;
+
             before(async function () {
                 browser = await remote({
                     capabilities: { browserName },
                     logLevel: 'info',
                 });
-                await browser.url('https://www.saucedemo.com/');
+
+                loginPage = new LoginPage(browser);
+                await loginPage.open();
             });
 
             after(async function () {
@@ -28,15 +33,16 @@ describe('SauceDemo Login Tests', function () {
 
             testData.forEach(({ username, password, expectedError }) => {
                 it(`Login with username: "${username}" and password: "${password}"`, async function () {
-                    await browser.$('//input[@id="user-name"]').setValue(username);
-                    await browser.$('//input[@id="password"]').setValue(password);
-                    await browser.$('//input[@id="login-button"]').click();
+                    await loginPage.enterUsername(username);
+                    await loginPage.enterPassword(password);
+                    await loginPage.clickLogin();
 
                     if (expectedError) {
-                        const errorMessage = await browser.$('//h3[@data-test="error"]').getText();
+                        const errorMessage = await loginPage.getErrorMessage();
                         expect(errorMessage).to.include(expectedError);
                     } else {
-                        expect(await browser.getTitle()).to.equal('Swag Labs');
+                        const title = await loginPage.getPageTitle();
+                        expect(title).to.equal('Swag Labs');
                     }
                 });
             });
